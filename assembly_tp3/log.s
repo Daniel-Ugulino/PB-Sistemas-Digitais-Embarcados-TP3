@@ -35,7 +35,7 @@ msg_tang_speed_len: .quad . - msg_tang_speed
 .equ STX,        0x02
 .equ ETX,        0x03
 .equ TYPE_SPEED, 0x20
-.equ SPEED_LEN,  4
+.equ SPEED_LEN,  8
 
 .extern cfg_dist_free
 .extern cfg_dist_att
@@ -47,6 +47,7 @@ msg_tang_speed_len: .quad . - msg_tang_speed
 log_fd: .skip 8
 log_byte_buf: .skip 8
 log_line_buf: .skip 80
+.global speed_pkt
 speed_pkt: .skip 8
 last_tang_speed: .skip 1
 
@@ -264,20 +265,33 @@ log_speed_poll:
     bl      spi_read_buf
 
     ldr     x9, =speed_pkt
+    mov     w13, #0
 
-    ldrb    w0, [x9]
+log_speed_scan:
+    cmp     w13, #5
+    b.ge    log_speed_done
+
+    ldrb    w0, [x9, x13]
     cmp     w0, #STX
-    b.ne    log_speed_done
+    b.ne    log_speed_next
 
-    ldrb    w0, [x9, #1]
+    add     x14, x9, x13
+    ldrb    w0, [x14, #1]
     cmp     w0, #TYPE_SPEED
-    b.ne    log_speed_done
+    b.ne    log_speed_next
 
-    ldrb    w0, [x9, #3]
+    ldrb    w0, [x14, #3]
     cmp     w0, #ETX
-    b.ne    log_speed_done
+    b.ne    log_speed_next
 
-    ldrb    w19, [x9, #2]
+    ldrb    w19, [x14, #2]
+    b       log_speed_found
+
+log_speed_next:
+    add     w13, w13, #1
+    b       log_speed_scan
+
+log_speed_found:
 
     ldr     x0, =last_tang_speed
     ldrb    w1, [x0]

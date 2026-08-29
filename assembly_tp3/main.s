@@ -51,7 +51,9 @@ main_loop:
 
 no_key:
     bl log_speed_poll
-    cmp w0, #0
+    mov w19, w0
+    bl ui_show_spi_rx
+    cmp w19, #0
     bne skip_spi_msg
 
     ldr x0, =spi_announced

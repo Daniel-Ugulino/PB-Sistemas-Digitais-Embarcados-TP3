@@ -32,8 +32,11 @@ pos_spi:        .ascii "\x1b[7;2H\x1b[K"
 pos_spi_len:    .quad . - pos_spi
 msg_spi_ok:     .ascii "SPI conectado com sucesso (Tang respondeu)"
 msg_spi_ok_len: .quad . - msg_spi_ok
-msg_spi_wait:   .ascii "SPI: /dev/spidev0.0 ok, aguardando Tang..."
+msg_spi_wait:   .ascii "SPI: /dev/spidev0.0 ok, aguardando Tang (GPIO9->pin81 MISO + GND)"
 msg_spi_wait_len: .quad . - msg_spi_wait
+pos_spi_rx:     .ascii "\x1b[8;2H\x1b[KRX: "
+pos_spi_rx_len: .quad . - pos_spi_rx
+hex_digits:     .ascii "0123456789ABCDEF"
 msg_spi_fail:   .ascii "SPI: /dev/spidev0.0 nao abriu (dtparam=spi=on, reboot, sudo)"
 msg_spi_fail_len: .quad . - msg_spi_fail
 
@@ -51,6 +54,7 @@ config_buf:     .space 64
 .extern cfg_dist_free
 .extern cfg_dist_att
 .extern cfg_vel_max
+.extern speed_pkt
 
 .section .text
 
@@ -268,6 +272,51 @@ ui_show_spi_fail:
     ldr     x1, =msg_spi_fail_len
     ldr     x1, [x1]
     b       ui_write_spi_line
+
+// void ui_show_spi_rx(void) — mostra os 4 primeiros bytes lidos da Tang
+.global ui_show_spi_rx
+ui_show_spi_rx:
+    stp     x29, x30, [sp, #-32]!
+
+    mov     x0, #STDOUT
+    ldr     x1, =pos_spi_rx
+    ldr     x2, =pos_spi_rx_len
+    ldr     x2, [x2]
+    mov     x8, #SYS_WRITE
+    svc     #0
+
+    ldr     x9, =speed_pkt
+    ldr     x10, =hex_digits
+    mov     w11, #0
+    sub     sp, sp, #16
+
+ui_rx_loop:
+    cmp     w11, #4
+    b.ge    ui_rx_done
+
+    ldrb    w0, [x9, x11]
+    lsr     w1, w0, #4
+    and     w2, w0, #0xF
+    ldrb    w1, [x10, x1]
+    ldrb    w2, [x10, x2]
+    strb    w1, [sp]
+    strb    w2, [sp, #1]
+    mov     w1, #' '
+    strb    w1, [sp, #2]
+
+    mov     x0, #STDOUT
+    mov     x1, sp
+    mov     x2, #3
+    mov     x8, #SYS_WRITE
+    svc     #0
+
+    add     w11, w11, #1
+    b       ui_rx_loop
+
+ui_rx_done:
+    add     sp, sp, #16
+    ldp     x29, x30, [sp], #32
+    ret
 
 .global ui_restore
 ui_restore:
