@@ -16,6 +16,13 @@ _start:
     bl config_init
     bl ui_init
     bl ui_show_config
+
+    bl spi_is_open
+    cmp w0, #0
+    beq spi_show_fail
+    bl ui_show_spi_wait
+    b main_loop
+spi_show_fail:
     bl ui_show_spi_fail
 
 main_loop:

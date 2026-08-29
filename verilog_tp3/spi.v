@@ -57,14 +57,14 @@ module spi_slave (
             byte_valido <= 1'b0;
             quadro_fim  <= 1'b0;
 
-            if (cs_desce) begin
+            if (cs_sobe) begin
+                quadro_fim <= 1'b1;
+            end else if (!ativo) begin
                 bit_cnt    <= 3'd0;
                 rx_shift   <= 8'd0;
                 tx_shift   <= tx_byte;
                 recarregar <= 1'b0;
-            end else if (cs_sobe) begin
-                quadro_fim <= 1'b1;
-            end else if (ativo) begin
+            end else begin
                 if (sck_sobe) begin
                     rx_shift <= {rx_shift[6:0], mosi_s[1]};
                     bit_cnt  <= bit_cnt + 3'd1;

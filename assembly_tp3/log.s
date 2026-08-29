@@ -259,6 +259,7 @@ log_speed_poll:
     stp     x19, x20, [sp, #16]
 
     ldr     x0, =speed_pkt
+    str     xzr, [x0]
     mov     x1, #SPEED_LEN
     bl      spi_read_buf
 

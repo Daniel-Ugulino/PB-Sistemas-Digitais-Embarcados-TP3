@@ -30,9 +30,11 @@ pos_config_len: .quad . - pos_config
 
 pos_spi:        .ascii "\x1b[7;2H\x1b[K"
 pos_spi_len:    .quad . - pos_spi
-msg_spi_ok:     .ascii "SPI conectado com sucesso"
+msg_spi_ok:     .ascii "SPI conectado com sucesso (Tang respondeu)"
 msg_spi_ok_len: .quad . - msg_spi_ok
-msg_spi_fail:   .ascii "SPI nao conectado"
+msg_spi_wait:   .ascii "SPI: /dev/spidev0.0 ok, aguardando Tang..."
+msg_spi_wait_len: .quad . - msg_spi_wait
+msg_spi_fail:   .ascii "SPI: /dev/spidev0.0 nao abriu (dtparam=spi=on, reboot, sudo)"
 msg_spi_fail_len: .quad . - msg_spi_fail
 
 prefix_free:    .ascii "Zona livre: "
@@ -250,6 +252,13 @@ ui_write_spi_line:
 ui_show_spi_ok:
     ldr     x0, =msg_spi_ok
     ldr     x1, =msg_spi_ok_len
+    ldr     x1, [x1]
+    b       ui_write_spi_line
+
+.global ui_show_spi_wait
+ui_show_spi_wait:
+    ldr     x0, =msg_spi_wait
+    ldr     x1, =msg_spi_wait_len
     ldr     x1, [x1]
     b       ui_write_spi_line
 

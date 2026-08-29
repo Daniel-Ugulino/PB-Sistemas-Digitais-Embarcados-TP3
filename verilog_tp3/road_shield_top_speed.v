@@ -28,6 +28,7 @@ module road_shield_top_speed #(
     wire [7:0] tx_byte;
     wire       byte_valido;
     wire       quadro_fim;
+    wire       quadro_ativo;
     wire       cs_desce;
     wire [7:0] dist_free;
     wire [7:0] dist_att;
@@ -43,7 +44,7 @@ module road_shield_top_speed #(
         .rx_byte      (rx_byte),
         .byte_valido  (byte_valido),
         .tx_byte      (tx_byte),
-        .quadro_ativo (),
+        .quadro_ativo (quadro_ativo),
         .cs_desce     (cs_desce),
         .quadro_fim   (quadro_fim)
     );
@@ -53,6 +54,7 @@ module road_shield_top_speed #(
         .rst         (rst),
         .speed       (speed),
         .cs_desce    (cs_desce),
+        .quadro_ativo(quadro_ativo),
         .rx_byte     (rx_byte),
         .byte_valido (byte_valido),
         .quadro_fim  (quadro_fim),

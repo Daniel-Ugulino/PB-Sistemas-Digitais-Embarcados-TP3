@@ -9,6 +9,7 @@ module speed_tx (
     input  wire [7:0] speed,
 
     input  wire       cs_desce,
+    input  wire       quadro_ativo,
     input  wire [7:0] rx_byte,
     input  wire       byte_valido,
     input  wire       quadro_fim,
@@ -25,9 +26,7 @@ module speed_tx (
     wire [2:0] tx_idx_eff = cs_desce ? 3'd0 : tx_idx;
 
     always @(posedge clk) begin
-        if (rst)
-            tx_idx <= 3'd0;
-        else if (cs_desce)
+        if (rst || !quadro_ativo)
             tx_idx <= 3'd0;
         else if (byte_valido)
             tx_idx <= tx_idx + 3'd1;

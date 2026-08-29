@@ -1,20 +1,22 @@
-// Enlace Raspberry Pi (master) -> Tang Nano (slave) via SPI.
+// Enlace Raspberry Pi (master) -> Tang Nano (slave) via SPI0.
 //
-// Usa SPI_IOC_MESSAGE(1): uma transacao, CS baixo durante todos os bytes.
-// write()/read() do spidev sao instaveis no Pi — o read() muitas vezes
-// manda 0xFF no MOSI, e o FPGA aborta o pacote de velocidade.
+// write()/read() do spidev: cada chamada e UMA transacao (CS baixo
+// durante todos os bytes). Evita SPI_IOC_MESSAGE, cujo tamanho da
+// struct muda entre kernels e pode transferir 0 bytes.
 //
 // Ligacao (Pi SPI0 -> Tang Nano 9K, pins do tangnano9k.cst):
 //   GPIO11 SCLK -> spi_sck (79)    GPIO10 MOSI -> spi_mosi (80)
 //   GPIO9  MISO <- spi_miso (81)   GPIO8  CE0  -> spi_cs_n (82)
 //   GND comum
 //
-// Habilitar no Pi (/boot/firmware/config.txt):
+// No Pi (/boot/firmware/config.txt):
 //   dtparam=spi=on
-//   # NAO use dtoverlay=spi1-3cs — isso e SPI1 (/dev/spidev1.0), pinos outros
-// Depois: sudo reboot && ls /dev/spidev0.0
+//   # NAO use dtoverlay=spi1-3cs
+// sudo reboot && ls /dev/spidev0.0 && sudo ./road_shield
 
 .equ SYS_OPENAT, 56
+.equ SYS_READ,   63
+.equ SYS_WRITE,  64
 .equ SYS_IOCTL,  29
 .equ SYS_CLOSE,  57
 
@@ -24,7 +26,6 @@
 .equ SPI_IOC_WR_MODE,          0x40016B01
 .equ SPI_IOC_WR_BITS_PER_WORD, 0x40016B03
 .equ SPI_IOC_WR_MAX_SPEED_HZ,  0x40046B04
-.equ SPI_IOC_MESSAGE_1,        0x40206B00
 
 .section .data
 spi_path:  .asciz "/dev/spidev0.0"
@@ -36,9 +37,8 @@ spi_speed: .word 250000
 
 .section .bss
 .align 8
-spi_fd:    .skip 8
-spi_xfer:  .skip 32
-spi_dummy: .skip 16
+.global spi_fd
+spi_fd: .skip 8
 
 .section .text
 
@@ -57,6 +57,15 @@ spi_open:
     str x0, [x1]
 
     ldp x29, x30, [sp], #16
+    ret
+
+// int spi_is_open(void) — 1 se fd >= 0
+.global spi_is_open
+spi_is_open:
+    ldr x0, =spi_fd
+    ldr x0, [x0]
+    cmp x0, #0
+    cset w0, ge
     ret
 
 .global spi_configure
@@ -81,68 +90,54 @@ spi_configure:
 spi_ioctl:
     ldr x0, =spi_fd
     ldr x0, [x0]
+    cmp x0, #0
+    b.lt spi_ioctl_skip
     mov x8, #SYS_IOCTL
     svc #0
+spi_ioctl_skip:
     ret
 
-// zera struct spi_ioc_transfer (32 bytes) em [x3]
-spi_xfer_clear:
-    str xzr, [x3]
-    str xzr, [x3, #8]
-    str xzr, [x3, #16]
-    str xzr, [x3, #24]
-    ret
-
-// ioctl SPI_IOC_MESSAGE(1) com struct em spi_xfer
-spi_xfer_run:
-    ldr x0, =spi_fd
-    ldr x0, [x0]
-    ldr x1, =SPI_IOC_MESSAGE_1
-    ldr x2, =spi_xfer
-    mov x8, #SYS_IOCTL
-    svc #0
-    ret
-
-// long spi_write_buf(const void *buf, size_t len)
 .global spi_write_buf
 spi_write_buf:
     stp x29, x30, [sp, #-32]!
-    stp x19, x20, [sp, #16]
-    mov x19, x0
-    mov x20, x1
+    stp x0, x1, [sp, #16]
 
-    ldr x3, =spi_xfer
-    bl  spi_xfer_clear
-    str x19, [x3]
-    str w20, [x3, #16]
-    bl  spi_xfer_run
+    ldr x2, =spi_fd
+    ldr x0, [x2]
+    cmp x0, #0
+    b.lt spi_write_fail
 
-    ldp x19, x20, [sp, #16]
+    ldp x1, x2, [sp, #16]
+    mov x8, #SYS_WRITE
+    svc #0
+
     ldp x29, x30, [sp], #32
     ret
 
-// long spi_read_buf(void *buf, size_t len)
-// MOSI = zeros (spi_dummy), MISO vai para buf.
+spi_write_fail:
+    mov x0, #-1
+    ldp x29, x30, [sp], #32
+    ret
+
 .global spi_read_buf
 spi_read_buf:
     stp x29, x30, [sp, #-32]!
-    stp x19, x20, [sp, #16]
-    mov x19, x0
-    mov x20, x1
+    stp x0, x1, [sp, #16]
 
-    ldr x3, =spi_dummy
-    str xzr, [x3]
-    str xzr, [x3, #8]
+    ldr x2, =spi_fd
+    ldr x0, [x2]
+    cmp x0, #0
+    b.lt spi_read_fail
 
-    ldr x3, =spi_xfer
-    bl  spi_xfer_clear
-    ldr x0, =spi_dummy
-    str x0, [x3]
-    str x19, [x3, #8]
-    str w20, [x3, #16]
-    bl  spi_xfer_run
+    ldp x1, x2, [sp, #16]
+    mov x8, #SYS_READ
+    svc #0
 
-    ldp x19, x20, [sp, #16]
+    ldp x29, x30, [sp], #32
+    ret
+
+spi_read_fail:
+    mov x0, #-1
     ldp x29, x30, [sp], #32
     ret
 
@@ -150,6 +145,9 @@ spi_read_buf:
 spi_close:
     ldr x1, =spi_fd
     ldr x0, [x1]
+    cmp x0, #0
+    b.lt spi_close_skip
     mov x8, #SYS_CLOSE
     svc #0
+spi_close_skip:
     ret
