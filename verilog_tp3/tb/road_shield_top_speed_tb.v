@@ -2,7 +2,7 @@
 
 module road_shield_top_speed_tb;
 
-    localparam [7:0] TB_MAX_SPEED = 8'd100;
+    localparam [7:0] TB_VEL_MAX = 8'd100;
 
     reg  clk, btn1, btn2;
     reg  spi_sck, spi_mosi, spi_cs_n;
@@ -15,7 +15,7 @@ module road_shield_top_speed_tb;
     reg [15:0] rx_frame;
     integer    rx_bits;
 
-    road_shield_top_speed #(.CLK_HZ(1000), .MAX_SPEED(TB_MAX_SPEED)) dut (
+    road_shield_top_speed #(.CLK_HZ(1000)) dut (
         .clk        (clk),
         .btn1       (btn1),
         .btn2       (btn2),
@@ -156,19 +156,22 @@ module road_shield_top_speed_tb;
         spi_frames = 0;
         btn1 = 1; btn2 = 1;
         spi_sck = 0; spi_mosi = 0; spi_cs_n = 1;
-        repeat (30) @(posedge clk);
+        repeat (300) @(posedge clk);
+
+        // Config inicial via SPI (vel_max vem do Pi, nao de parametro fixo)
+        send_cfg(8'd100, 8'd50, TB_VEL_MAX);
 
         // Teste 1: incremento basico
         press(1);
         check(8'd5, "incremento basico");
 
-        // Teste 2: loop ate 120, nao pode passar de MAX_SPEED
+        // Teste 2: loop ate 120, nao pode passar de vel_max do SPI
         for (k = 0; k < 24; k = k + 1) begin
             press(1);
-            if (speed > TB_MAX_SPEED)
-                $display("ERROR saturacao iter %0d: speed=%0d > MAX=%0d", k, speed, TB_MAX_SPEED);
+            if (speed > TB_VEL_MAX)
+                $display("ERROR saturacao iter %0d: speed=%0d > MAX=%0d", k, speed, TB_VEL_MAX);
         end
-        check(TB_MAX_SPEED, "Nao ultrapasso max speed");
+        check(TB_VEL_MAX, "Nao ultrapasso max speed");
 
         // Teste 3: tentar reduzir até 0 (nao fica negativo)
         for (k = 0; k < 25; k = k + 1) press(0);

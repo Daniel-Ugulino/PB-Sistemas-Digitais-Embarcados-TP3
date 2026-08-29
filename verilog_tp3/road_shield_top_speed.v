@@ -1,8 +1,8 @@
 module road_shield_top_speed #(
-    parameter CLK_HZ           = 27_000_000,
-    parameter [7:0] MAX_SPEED  = 8'd100,
-    parameter [7:0] DIST_FREE  = 8'd100,
-    parameter [7:0] DIST_ATT   = 8'd50
+    parameter CLK_HZ             = 27_000_000,
+    parameter [7:0] DIST_FREE_INIT = 8'd100,
+    parameter [7:0] DIST_ATT_INIT  = 8'd50,
+    parameter [7:0] VEL_MAX_INIT   = 8'd0
 ) (
     input  wire clk,
     input  wire btn1,
@@ -15,6 +15,14 @@ module road_shield_top_speed #(
     output wire number_clk,
     output wire number_cs
 );
+    reg [7:0] por_cnt = 8'd0;
+    wire      rst     = (por_cnt != 8'hff);
+
+    always @(posedge clk) begin
+        if (rst)
+            por_cnt <= por_cnt + 8'd1;
+    end
+
     wire [7:0] speed;
     wire [7:0] rx_byte;
     wire [7:0] tx_byte;
@@ -27,7 +35,7 @@ module road_shield_top_speed #(
 
     spi_slave u_spi (
         .clk          (clk),
-        .rst          (1'b0),
+        .rst          (rst),
         .sck          (spi_sck),
         .mosi         (spi_mosi),
         .cs_n         (spi_cs_n),
@@ -42,7 +50,7 @@ module road_shield_top_speed #(
 
     speed_tx u_speed_tx (
         .clk         (clk),
-        .rst         (1'b0),
+        .rst         (rst),
         .speed       (speed),
         .cs_desce    (cs_desce),
         .rx_byte     (rx_byte),
@@ -52,12 +60,12 @@ module road_shield_top_speed #(
     );
 
     config_rx #(
-        .DIST_FREE_INIT (DIST_FREE),
-        .DIST_ATT_INIT  (DIST_ATT),
-        .VEL_MAX_INIT   (MAX_SPEED)
+        .DIST_FREE_INIT (DIST_FREE_INIT),
+        .DIST_ATT_INIT  (DIST_ATT_INIT),
+        .VEL_MAX_INIT   (VEL_MAX_INIT)
     ) u_cfg (
         .clk         (clk),
-        .rst         (1'b0),
+        .rst         (rst),
         .rx_byte     (rx_byte),
         .byte_valido (byte_valido),
         .quadro_fim  (quadro_fim),
@@ -79,7 +87,7 @@ module road_shield_top_speed #(
     // Esquerda: velocidade atual | Direita: vel_max recebida do Pi
     number_control u_display (
         .clk        (clk),
-        .rst_n      (1'b1),
+        .rst_n      (~rst),
         .value_a    ({6'd0, speed}),
         .value_b    ({6'd0, vel_max}),
         .number_din (number_din),

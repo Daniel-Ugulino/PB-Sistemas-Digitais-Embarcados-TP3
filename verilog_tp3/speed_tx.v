@@ -1,9 +1,7 @@
-// Envia velocidade atual Tang -> Pi via MISO durante leitura SPI.
-//
+// Envia velocidade atual Tang -> Pi via MISO em todo quadro SPI:
 //   STX | 0x20 | speed | ETX
 //
-// Responde apenas quando o Pi faz read (MOSI = 0). Durante envio de
-// config (MOSI != 0), MISO fica em zero para nao interferir.
+// Independente do MOSI: config_rx so olha MOSI, isto so dirige MISO.
 
 module speed_tx (
     input  wire       clk,
@@ -22,41 +20,27 @@ module speed_tx (
     localparam [7:0] ETX        = 8'h03;
     localparam [7:0] TYPE_SPEED = 8'h20;
 
-    reg       read_tx = 1'b0;
-    reg [2:0] tx_idx  = 3'd0;
+    reg [2:0] tx_idx = 3'd0;
 
     wire [2:0] tx_idx_eff = cs_desce ? 3'd0 : tx_idx;
 
     always @(posedge clk) begin
-        if (rst) begin
-            read_tx <= 1'b0;
-            tx_idx  <= 3'd0;
-        end else begin
-            if (cs_desce) begin
-                read_tx <= 1'b1;
-                tx_idx  <= 3'd0;
-            end else if (byte_valido) begin
-                if (rx_byte != 8'h00)
-                    read_tx <= 1'b0;
-                tx_idx <= tx_idx + 3'd1;
-            end
-
-            if (quadro_fim)
-                read_tx <= 1'b0;
-        end
+        if (rst)
+            tx_idx <= 3'd0;
+        else if (cs_desce)
+            tx_idx <= 3'd0;
+        else if (byte_valido)
+            tx_idx <= tx_idx + 3'd1;
     end
 
     always @(*) begin
-        if (!read_tx && !cs_desce)
-            tx_byte = 8'h00;
-        else
-            case (tx_idx_eff)
-                3'd0: tx_byte = STX;
-                3'd1: tx_byte = TYPE_SPEED;
-                3'd2: tx_byte = speed;
-                3'd3: tx_byte = ETX;
-                default: tx_byte = 8'h00;
-            endcase
+        case (tx_idx_eff)
+            3'd0:    tx_byte = STX;
+            3'd1:    tx_byte = TYPE_SPEED;
+            3'd2:    tx_byte = speed;
+            3'd3:    tx_byte = ETX;
+            default: tx_byte = 8'h00;
+        endcase
     end
 
 endmodule
