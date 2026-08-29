@@ -2,7 +2,7 @@ module road_shield_top_speed #(
     parameter CLK_HZ             = 27_000_000,
     parameter [7:0] DIST_FREE_INIT = 8'd100,
     parameter [7:0] DIST_ATT_INIT  = 8'd50,
-    parameter [7:0] VEL_MAX_INIT   = 8'd0
+    parameter [7:0] VEL_MAX_INIT   = 8'd120
 ) (
     input  wire clk,
     input  wire btn1,

@@ -3,6 +3,7 @@
 
 .section .data
 sleep_spec: .quad 0, 10000000
+spi_announced: .byte 0
 
 .section .text
 .global _start
@@ -14,6 +15,8 @@ _start:
     bl spi_configure
     bl config_init
     bl ui_init
+    bl ui_show_config
+    bl ui_show_spi_fail
 
 main_loop:
     bl keyboard_read
@@ -41,7 +44,17 @@ main_loop:
 
 no_key:
     bl log_speed_poll
+    cmp w0, #0
+    bne skip_spi_msg
 
+    ldr x0, =spi_announced
+    ldrb w1, [x0]
+    cbnz w1, skip_spi_msg
+    mov w1, #1
+    strb w1, [x0]
+    bl ui_show_spi_ok
+
+skip_spi_msg:
     mov x0, #0
     ldr x1, =sleep_spec
     mov x2, #0

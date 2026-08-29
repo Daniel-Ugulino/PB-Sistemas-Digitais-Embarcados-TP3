@@ -20,6 +20,8 @@ module speed_control #(
     wire btn2_raw = ~btn2;
     wire sample = (sample_cnt == SAMPLE_MAX - 1);
 
+    // max_speed=0 (antes do SPI) nao pode travar os botoes
+    wire [7:0] limit = (max_speed == 8'd0) ? 8'd120 : max_speed;
     wire [8:0] speed_up = {1'b0, speed_reg} + {1'b0, STEP};
 
     always @(posedge clk) begin
@@ -30,11 +32,11 @@ module speed_control #(
             btn2_s <= btn2_raw;
 
             if (btn1_raw && !btn1_s)
-                speed_reg <= (speed_up > {1'b0, max_speed}) ? max_speed : speed_up[7:0];
+                speed_reg <= (speed_up > {1'b0, limit}) ? limit : speed_up[7:0];
             else if (btn2_raw && !btn2_s)
                 speed_reg <= (speed_reg < STEP) ? 8'd0 : speed_reg - STEP;
-            else if (speed_reg > max_speed)
-                speed_reg <= max_speed;
+            else if (speed_reg > limit)
+                speed_reg <= limit;
         end
     end
 

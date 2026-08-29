@@ -281,7 +281,7 @@ log_speed_poll:
     ldr     x0, =last_tang_speed
     ldrb    w1, [x0]
     cmp     w19, w1
-    beq     log_speed_done
+    beq     log_speed_ok
 
     strb    w19, [x0]
 
@@ -305,7 +305,14 @@ log_speed_poll:
     mov     x0, x20
     bl      log_write
 
+log_speed_ok:
+    mov     w0, #0
+    ldp     x19, x20, [sp, #16]
+    ldp     x29, x30, [sp], #32
+    ret
+
 log_speed_done:
+    mov     w0, #-1
     ldp     x19, x20, [sp, #16]
     ldp     x29, x30, [sp], #32
     ret

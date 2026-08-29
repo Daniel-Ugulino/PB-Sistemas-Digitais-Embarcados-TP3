@@ -8,6 +8,11 @@
 //   GPIO11 SCLK -> spi_sck (79)    GPIO10 MOSI -> spi_mosi (80)
 //   GPIO9  MISO <- spi_miso (81)   GPIO8  CE0  -> spi_cs_n (82)
 //   GND comum
+//
+// Habilitar no Pi (/boot/firmware/config.txt):
+//   dtparam=spi=on
+//   # NAO use dtoverlay=spi1-3cs — isso e SPI1 (/dev/spidev1.0), pinos outros
+// Depois: sudo reboot && ls /dev/spidev0.0
 
 .equ SYS_OPENAT, 56
 .equ SYS_IOCTL,  29

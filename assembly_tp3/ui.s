@@ -28,6 +28,13 @@ help_text_len:  .quad . - help_text
 pos_config:     .ascii "\x1b[3;2H\x1b[K"
 pos_config_len: .quad . - pos_config
 
+pos_spi:        .ascii "\x1b[7;2H\x1b[K"
+pos_spi_len:    .quad . - pos_spi
+msg_spi_ok:     .ascii "SPI conectado com sucesso"
+msg_spi_ok_len: .quad . - msg_spi_ok
+msg_spi_fail:   .ascii "SPI nao conectado"
+msg_spi_fail_len: .quad . - msg_spi_fail
+
 prefix_free:    .ascii "Zona livre: "
 prefix_free_len: .quad . - prefix_free
 mid_att:        .ascii " m | Atencao: "
@@ -215,6 +222,43 @@ ui_show_config:
 
     ldp     x29, x30, [sp], #32
     ret
+
+ui_write_spi_line:
+    stp     x29, x30, [sp, #-32]!
+    stp     x19, x20, [sp, #16]
+    mov     x19, x0
+    mov     x20, x1
+
+    mov     x0, #STDOUT
+    ldr     x1, =pos_spi
+    ldr     x2, =pos_spi_len
+    ldr     x2, [x2]
+    mov     x8, #SYS_WRITE
+    svc     #0
+
+    mov     x0, #STDOUT
+    mov     x1, x19
+    mov     x2, x20
+    mov     x8, #SYS_WRITE
+    svc     #0
+
+    ldp     x19, x20, [sp, #16]
+    ldp     x29, x30, [sp], #32
+    ret
+
+.global ui_show_spi_ok
+ui_show_spi_ok:
+    ldr     x0, =msg_spi_ok
+    ldr     x1, =msg_spi_ok_len
+    ldr     x1, [x1]
+    b       ui_write_spi_line
+
+.global ui_show_spi_fail
+ui_show_spi_fail:
+    ldr     x0, =msg_spi_fail
+    ldr     x1, =msg_spi_fail_len
+    ldr     x1, [x1]
+    b       ui_write_spi_line
 
 .global ui_restore
 ui_restore:
