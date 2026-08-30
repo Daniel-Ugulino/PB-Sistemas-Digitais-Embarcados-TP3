@@ -1,8 +1,6 @@
 // Recebe o pacote de configuracao Pi -> FPGA:
 //   STX | 0x10 | dist_free | dist_att | vel_max | ETX
 //
-// Cada byte chega de spi_slave.v (byte_valido). quadro_fim aborta
-// um pacote incompleto. Sem checksum: o CS delimita o quadro.
 
 module config_rx #(
     parameter [7:0] DIST_FREE_INIT = 8'd100,

@@ -49,7 +49,7 @@ module road_shield_top_speed #(
         .quadro_fim   (quadro_fim)
     );
 
-    speed_tx u_speed_tx (
+    config_tx u_config_tx (
         .clk         (clk),
         .rst         (rst),
         .speed       (speed),
