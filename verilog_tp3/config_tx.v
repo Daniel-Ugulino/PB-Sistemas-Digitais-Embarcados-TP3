@@ -1,7 +1,6 @@
 // Envia velocidade atual Tang -> Pi via MISO em todo quadro SPI:
 //   STX | 0x20 | speed | ETX
 //
-// Independente do MOSI: config_rx so olha MOSI, isto so dirige MISO.
 
 module config_tx (
     input  wire       clk,

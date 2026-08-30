@@ -113,7 +113,7 @@ ui_init:
 ui_show_key:
     stp x29, x30, [sp, #-16]!
 
-    strb w0, [sp, #-16]!
+    strb w0, [sp, #-16]! // 1. Pega a tecla que CHEGOU EM w0 e grava no topo da pilha
 
     mov x0, #STDOUT
     ldr x1, =pos_key_echo

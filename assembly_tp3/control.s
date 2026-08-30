@@ -42,13 +42,13 @@ control:
     mov     x29, sp
     str     x19, [sp, #16]
 
-    orr     w0, w0, #0x20
-    sub     w1, w0, #'a'
+    orr     w0, w0, #0x20 // Faz um OR bit a bit entre w0 e #0x20 forcando toda letra a virar minuscula
+    sub     w1, w0, #'a' // Subtrai o codigo asci do caracter a do valor que esta em w0, para conseguir o index da look up table, EX d: 100 - 97 = 3
     cmp     w1, #KEY_TABLE_MAX
     b.hi    control_ignore
 
-    ldr     x2, =key_table
-    ldr     x3, [x2, w1, uxtw #3]
+    ldr     x2, =key_table 
+    ldr     x3, [x2, w1, uxtw #3] // Instrucao que acessa a tabela, deslocando w1 3 bits para esquerda, o mesmo que multiplicar por 8 devido ao quad da tabela
     br      x3
 
 control_ignore:
@@ -95,14 +95,14 @@ control_ret:
     ldp     x29, x30, [sp], #32
     ret
 
-// [x9] += w1, saturando em 0..255
+// saturando em 0..255
 adjust_byte:
-    ldrb    w2, [x9]
-    add     w2, w2, w1
-    cmp     w2, #255
-    mov     w3, #255
-    csel    w2, w2, w3, le
+    ldrb    w2, [x9] // Lê 1 byte (8 bits) do endereço apontado por x9 e guarda no registrador w2.
+    add     w2, w2, w1 // SOma o valor do passo
+    cmp     w2, #255 // compara com 255
+    mov     w3, #255 // coloca 255 em w3
+    csel    w2, w2, w3, le // Caso w2 for menor que 255 mentem seu valor, caso contrario é substituido pelo valor de w3
     cmp     w2, #0
-    csel    w2, w2, wzr, ge
+    csel    w2, w2, wzr, ge // Caso w2 for maior igual a zero mantem seu resultado, contrario substitui pelo registrador wzr, que sempre vale 0
     strb    w2, [x9]
     ret
