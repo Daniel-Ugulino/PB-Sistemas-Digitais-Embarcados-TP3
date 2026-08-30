@@ -1,39 +1,22 @@
-// Enlace Raspberry Pi (master) -> Tang Nano (slave) via SPI0.
-//
-// write()/read() do spidev: cada chamada e UMA transacao (CS baixo
-// durante todos os bytes). Evita SPI_IOC_MESSAGE, cujo tamanho da
-// struct muda entre kernels e pode transferir 0 bytes.
-//
-// Ligacao (Pi SPI0 -> Tang Nano 9K, pins do tangnano9k.cst):
-//   GPIO11 SCLK -> spi_sck (79)    GPIO10 MOSI -> spi_mosi (80)
-//   GPIO9  MISO <- spi_miso (81)   GPIO8  CE0  -> spi_cs_n (82)
-//   GND comum
-//
-// No Pi (/boot/firmware/config.txt):
-//   dtparam=spi=on
-//   # NAO use dtoverlay=spi1-3cs
-// sudo reboot && ls /dev/spidev0.0 && sudo ./road_shield
+.equ SYS_OPENAT, 56 // ID da syscall openat (para abrir arquivos).
+.equ SYS_READ,   63 // ID da syscall read (para ler do SPI).
+.equ SYS_WRITE,  64 // ID da syscall write (para enviar dados ao SPI).
+.equ SYS_IOCTL,  29 // ID da syscall ioctl (para enviar comandos de controle do driver).
+.equ SYS_CLOSE,  57 // ID da syscall close (para fechar o arquivo).
 
-.equ SYS_OPENAT, 56
-.equ SYS_READ,   63
-.equ SYS_WRITE,  64
-.equ SYS_IOCTL,  29
-.equ SYS_CLOSE,  57
+.equ AT_FDCWD,   -100 // Flag que indica ao openat para usar o diretório de trabalho atual como referência relativa.
+.equ O_RDWR,     0x0002 // Flag para abrir o arquivo em modo de Leitura e Escrita (Read/Write).
 
-.equ AT_FDCWD,   -100
-.equ O_RDWR,     0x0002
-
-.equ SPI_IOC_WR_MODE,          0x40016B01
-.equ SPI_IOC_WR_BITS_PER_WORD, 0x40016B03
-.equ SPI_IOC_WR_MAX_SPEED_HZ,  0x40046B04
+.equ SPI_IOC_WR_MODE,          0x40016B01 // Comando ioctl para definir o modo SPI (fase e polaridade do relógio - CPOL/CPHA).
+.equ SPI_IOC_WR_BITS_PER_WORD, 0x40016B03 // Comando ioctl para definir o tamanho da palavra em bits.
+.equ SPI_IOC_WR_MAX_SPEED_HZ,  0x40046B04 // Comando ioctl para definir a velocidade máxima de clock em Hz.
 
 .section .data
-spi_path:  .asciz "/dev/spidev0.0"
-
-spi_mode:  .byte 0
-spi_bits:  .byte 8
+spi_path:  .asciz "/dev/spidev0.0" // caminho do dispositivo de hardware no Linux.
+spi_mode:  .byte 0 // Define o Modo SPI como 0 (1 byte)
+spi_bits:  .byte 8 // Define o tamanho da palavra como 8 bits (1 byte).
 .align 2
-spi_speed: .word 250000
+spi_speed: .word 250000 // Define o clock do SPI em 250 kHz
 
 .section .bss
 .align 8
@@ -64,30 +47,30 @@ spi_open:
 spi_is_open:
     ldr x0, =spi_fd
     ldr x0, [x0]
-    cmp x0, #0
-    cset w0, ge
+    cmp x0, #0 // Compara o valor com 0. No Linux, um File Descriptor válido é sempre > 0. Valores < 0 indicam erro.
+    cset w0, ge // Se x0 >= 0 ? 1 : 0
     ret
 
 .global spi_configure
 spi_configure:
     stp x29, x30, [sp, #-16]!
 
-    ldr x1, =SPI_IOC_WR_MODE
-    ldr x2, =spi_mode
+    ldr x1, =SPI_IOC_WR_MODE // Arg 2 do ioctl: Código do comando para alterar o modo.
+    ldr x2, =spi_mode // Arg 3 do ioctl: Endereço da variável contendo o valor do modo (0).
     bl  spi_ioctl
 
-    ldr x1, =SPI_IOC_WR_BITS_PER_WORD
+    ldr x1, =SPI_IOC_WR_BITS_PER_WORD // Código do comando para alterar os bits por palavra.
     ldr x2, =spi_bits
     bl  spi_ioctl
 
-    ldr x1, =SPI_IOC_WR_MAX_SPEED_HZ
+    ldr x1, =SPI_IOC_WR_MAX_SPEED_HZ // Código para alterar o clock do barramento.
     ldr x2, =spi_speed
     bl  spi_ioctl
 
     ldp x29, x30, [sp], #16
     ret
 
-spi_ioctl:
+spi_ioctl: // Checa se /dev/spidev0.0 esta aberto, caso sim chama a syscall
     ldr x0, =spi_fd
     ldr x0, [x0]
     cmp x0, #0
@@ -100,14 +83,14 @@ spi_ioctl_skip:
 .global spi_write_buf
 spi_write_buf:
     stp x29, x30, [sp, #-32]!
-    stp x0, x1, [sp, #16]
+    stp x0, x1, [sp, #16] // Salva temporariamente os argumentos x0 (ponteiro) e x1 (tamanho) no topo da pilha nos offsets de 16 a 31 bytes.
 
-    ldr x2, =spi_fd
-    ldr x0, [x2]
-    cmp x0, #0
+    ldr x2, =spi_fd // Pega o endereço de spi_fd.
+    ldr x0, [x2] // Carrega o manipulador do arquivo em x0
+    cmp x0, #0 // Verifica se o arquivo é válido.
     b.lt spi_write_fail
 
-    ldp x1, x2, [sp, #16]
+    ldp x1, x2, [sp, #16] // Restaura os parametros originais da pilha, x1 passa a ter os dados de x0, x2 passa a ter os dados de x1
     mov x8, #SYS_WRITE
     svc #0
 
