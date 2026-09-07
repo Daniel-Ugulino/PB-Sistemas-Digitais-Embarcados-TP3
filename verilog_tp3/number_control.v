@@ -36,13 +36,15 @@ module number_control (
             4'd1: frame = 16'h09FF;
             4'd2: frame = 16'h0B07;
             4'd3: frame = 16'h0A08;
-            4'd4: frame = 16'h0C01;
-            4'd5: frame = 16'h0100 + (value_a % 10);
-            4'd6: frame = 16'h0200 + ((value_a / 10) % 10);
-            4'd7: frame = 16'h0300 + ((value_a / 100) % 10);
-            4'd8: frame = 16'h0500 + (value_b % 10);
-            4'd9: frame = 16'h0600 + ((value_b / 10) % 10);
-            default: frame = 16'h0700 + ((value_b / 100) % 10);
+            4'd4:  frame = 16'h0C01;
+            4'd5:  frame = 16'h0100 + (value_a % 10);
+            4'd6:  frame = 16'h0200 + ((value_a / 10) % 10);
+            4'd7:  frame = 16'h0300 + ((value_a / 100) % 10);
+            4'd8:  frame = 16'h0400;
+            4'd9:  frame = 16'h0500 + (value_b % 10);
+            4'd10: frame = 16'h0600 + ((value_b / 10) % 10);
+            4'd11: frame = 16'h0700 + ((value_b / 100) % 10);
+            default: frame = 16'h0800;
         endcase
     end
 
@@ -90,7 +92,7 @@ module number_control (
 
                 ST_COMMIT_FRAME: begin
                     number_cs <= 1'b1;
-                    frame_idx <= (frame_idx == 4'd10) ? 4'd0 : frame_idx + 1;
+                    frame_idx <= (frame_idx == 4'd12) ? 4'd0 : frame_idx + 1;
                     state     <= ST_START_FRAME;
                 end
 
